@@ -125,11 +125,32 @@ const ratings = asyncHandler(async(req, res) => {
     })
 })
 
+
+const updateImagesProduct = asyncHandler(async(req, res) => {
+  const {pid} = req.params;
+  if(!req.files) throw new Error('Missing files')
+  const response = await Product.findByIdAndUpdate(pid, {
+    $push: {
+      images: {
+        $each : req.files.map(el=> el.path)
+      }
+    }
+  }, {
+    new: true
+  })
+
+  return res.status(200).json({
+    status: response ? true: false,
+    product: response ? response : 'Cannot update images product'
+  })
+})
+
 module.exports = {
   createProduct,
   getProduct,
   getProducts,
   updateProduct,
   deleteProduct,
-  ratings
+  ratings,
+  updateImagesProduct
 };
