@@ -9,13 +9,14 @@ const createCategory = asyncHandler(async(req, res) => {
     })
 })
 
-const getCategories = asyncHandler(async(req, res) => {
-    const response = await ProductCategory.find().select('title', '_id');
+const getCategories = asyncHandler(async (req, res) => {
+    const response = await ProductCategory.find({}, '_id title brand');
     return res.json({
         success: response ? true : false,
         prodCate: response ? response : 'Can\'t get category '
-    })
-})
+    });
+});
+
 
 const updateCategories = asyncHandler(async(req, res) => {
     const {pcid} = req.params;

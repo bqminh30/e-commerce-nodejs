@@ -49,7 +49,7 @@ const getProducts = asyncHandler(async (req, res) => {
 
   //Pagination
   const page = +req.query.page || 1;
-  const limit = +req.query.limit || 2;
+  const limit = +req.query.limit || 10;
   const skip = (page -1 ) * limit;
   queryCommand = queryCommand.skip(skip).limit(limit);
 
@@ -144,6 +144,7 @@ const updateImagesProduct = asyncHandler(async(req, res) => {
     product: response ? response : 'Cannot update images product'
   })
 })
+
 
 module.exports = {
   createProduct,
