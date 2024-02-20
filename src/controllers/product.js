@@ -13,7 +13,13 @@ const createProduct = asyncHandler(async (req, res) => {
 });
 const getProduct = asyncHandler(async (req, res) => {
   const { pid } = req.params;
-  const product = await Product.findById(pid);
+  const product = await Product.findById(pid).populate({
+    path: 'ratings',
+    populate: {
+      path: 'postedBy',
+      select: 'lastname firstname avatar'
+    }
+  });
   return res.status(200).json({
     success: product ? true : false,
     productData: product ? product : "Cannot get product",
@@ -30,11 +36,24 @@ const getProducts = asyncHandler(async (req, res) => {
   let queryString = JSON.stringify(queries);
   queryString = queryString.replace(/\b(gte|gt|lt|lte)\b/g, (macthedEl) => `$${macthedEl}`);
   const formatedQueries = JSON.parse(queryString);
+  let colorQueryObject = {}
   //Filtering
   if (queries.title) {
     formatedQueries.title = { $regex: new RegExp(queries.title, "i") };
   } 
-  let queryCommand = Product.find(formatedQueries);
+  if (queries.category) {
+    formatedQueries.category = { $regex: new RegExp(queries.category, "i") };
+  } 
+  if (queries.color) {
+    delete formatedQueries.color;
+    const colorArr = queries.color.split(',');
+    const colorQuery = colorArr.map(el => (
+      {color: {$regex: el, $options: 'i'}}
+    ))
+    colorQueryObject = {$or: colorQuery}
+  } 
+  const q = {...colorQueryObject,...formatedQueries}
+  let queryCommand = Product.find(q);
   //Sorting
   if(req.query.sort){
     const sortBy = req.query.sort.split(',').join(' ');
@@ -55,7 +74,7 @@ const getProducts = asyncHandler(async (req, res) => {
 
   
   let resData = await queryCommand
-  const counts = await Product.countDocuments(formatedQueries);
+  const counts = await Product.countDocuments(q);
 
   return res.status(200).json({
     success: resData ? true : false,
@@ -63,6 +82,8 @@ const getProducts = asyncHandler(async (req, res) => {
     counts,
   });
 });
+
+
 const updateProduct = asyncHandler(async (req, res) => {
   const { pid } = req.params;
   if (req.body && req.body.title) req.body.slug = slugify(req.body.title);
@@ -86,7 +107,7 @@ const deleteProduct = asyncHandler(async (req, res) => {
 
 const ratings = asyncHandler(async(req, res) => {
     const {_id} = req.user;
-    const {star, comment, pid} = req.body;
+    const {star, comment, pid, updatedAt} = req.body;
     if(!star || !pid) throw new Error("Missing inputs")
     const ratingProduct = await Product.findById(pid);
     const alreadyRating = ratingProduct?.ratings?.find(el=> el.postedBy.toString() === _id)
@@ -99,6 +120,7 @@ const ratings = asyncHandler(async(req, res) => {
             $set : {
                 "ratings.$.star" : star,
                 "ratings.$.comment" : comment,
+                "ratings.$.updatedAt" : updatedAt,
 
             }
         },{new: true})
